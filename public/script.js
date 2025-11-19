@@ -7,7 +7,7 @@ class GameStore {
         this.currentSearch = "";
         this.currentStore = "";
         this.currentSort = "";
-        this.maxGames = 15;
+        this.maxGames = 16;
 
         // Inicializar elementos y eventos
         this.initializeElements();

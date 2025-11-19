@@ -298,7 +298,7 @@ body {
   background-clip: text;
 }
 
-/* Shadow utilities */
+/* Shadow */
 .shadow-card {
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
 }
@@ -314,7 +314,7 @@ body {
               linear-gradient(135deg, var(--color-primary), var(--color-secondary)) border-box;
 }
 
-/* ===== ESTILOS PARA COMPONENTES DE FORMULARIO ===== */
+/*ESTILOS PARA COMPONENTES DE FORMULARIO*/
 
 .form-input {
   border: 1px solid #D1D5DB;
@@ -344,7 +344,7 @@ body {
   outline: none;
 }
 
-/* ===== ANIMACIONES DE TRANSICIÓN PARA EL MODAL ===== */
+/*  ANIMACIONES DE TRANSICIÓN PARA EL MODAL */
 .modal-enter {
   animation: modalEnter 0.3s ease-out;
 }
