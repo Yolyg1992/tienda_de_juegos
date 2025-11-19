@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NovaPlay — Ofertas de videojuegos</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%234F46E5'/%3E%3Ctext x='50' y='57' font-size='48' text-anchor='middle' fill='white' font-family='Arial'%3EN%3C/text%3E%3C/svg%3E">
+    <!-- Tailwind CSS configurado con CDN (en producción usar CLI v4.1) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Spinner animado para indicadores de carga */
+        .spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #4F46E5;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Efectos desplazamiento para la interfaz sin hacer clic para tarjetas de juegos */
+        .game-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .game-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        /* transicion de colores para la etiqueta de descuento */
+        .discount-badge {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+        /* Efecto de truncar texto a 2 líneas */
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        /* Animación de entrada para elementos nuevos */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+    <div class="container mx-auto px-4">
+        <!-- HEADER -->
+        <header class="py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-indigo-700">NovaPlay Market</h1>
+                <p class="text-sm text-gray-500">Ofertas y descuentos en juegos — descubre tu próxima partida</p>
+            </div>
+            <div class="mt-2 sm:mt-0 text-right">
+                <p class="text-sm text-gray-500">Proyecto: Catálogo CheapShark</p>
+            </div>
+        </header>
+
+        <!-- FILTROS Y BÚSQUEDA -->
+        <section class="mb-6 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 items-end">
+            <!-- Barra de busqueda con input y botón -->
+            <div class="sm:col-span-2 md:col-span-1">
+                <label class="sr-only" for="search">Buscar</label>
+                <div class="flex">
+                    <input 
+                        id="search" 
+                        class="flex-1 border border-gray-300 rounded-l px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" 
+                        placeholder="Buscar por nombre..." 
+                    />
+                    <button 
+                        id="btnSearch" 
+                        class="bg-indigo-600 text-white px-4 py-2 rounded-r hover:bg-indigo-700 transition-colors"
+                    >
+                        Buscar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Selector para filtrar por tienda -->
+            <div>
+                <label for="storeSelect" class="block text-sm text-gray-600 mb-1">Filtrar por tienda</label>
+                <select 
+                    id="storeSelect" 
+                    class="w-full border border-gray-300 rounded px-2 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                >
+                    <option value="">Todas</option>
+                    <!-- opciones de tiendas principales -->
+                    <option value="1">Steam</option>
+                    <option value="7">GOG</option>
+                    <option value="11">Humble Store</option>
+                    <option value="8">Origin</option>
+                    <option value="3">GreenManGaming</option>
+                </select>
+            </div>
+
+            <!-- Selector para ordenar resultados -->
+            <div>
+                <label for="sortSelect" class="block text-sm text-gray-600 mb-1">Ordenar por</label>
+                <select 
+                    id="sortSelect" 
+                    class="w-full border border-gray-300 rounded px-2 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                >
+                    <option value="default">Relevancia</option>
+                    <option value="salePriceAsc">Precio oferta ↑</option>
+                    <option value="salePriceDesc">Precio oferta ↓</option>
+                    <option value="normalPriceAsc">Precio normal ↑</option>
+                    <option value="normalPriceDesc">Precio normal ↓</option>
+                    <option value="savingsDesc">Mayor descuento</option>
+                    <option value="titleAsc">Nombre A-Z</option>
+                </select>
+            </div>
+        </section>
+
+         <!-- Indicadores de carga, error y sin resultados -->
+        <div id="indicators" class="mb-4 flex items-center gap-4">
+            <div id="loading" class="hidden items-center gap-2">
+                <div class="spinner" aria-hidden="true"></div>
+                <span class="text-gray-600">Cargando...</span>
+            </div>
+            <div id="error" class="hidden text-red-600">Error al cargar datos</div>
+            <div id="noResults" class="hidden text-gray-500">No se encontraron resultados</div>
+        </div>
+
+        <!-- GRID DE JUEGOS -->
+        <main>
+            <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
+
+            <!-- Botón de cargar más -->
+            <div class="mt-8 text-center">
+                <button 
+                    id="loadMore" 
+                    class="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700 transition-colors"
+                >
+                    Cargar más
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL detalles del juego -->
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-auto shadow-xl max-h-[90vh] overflow-y-auto">
+            <button id="closeModal" class="float-right text-gray-500 hover:text-gray-700 text-xl">&times;</button>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // Clase principal que gestiona carga  búsqueda, filtrado y renderizado
+        class GameStore {
+            constructor() {
+                // Estado de la aplicación
+                this.games = [];           // Lista de juegos cargados
+                this.currentPage = 0;      // Página actual para paginación
+                this.isLoading = false;    // indicador para evitar múltiples cargas
+                this.hasMore = true;       // Control para paginación infinita
+                this.currentSearch = '';   // Término de búsqueda actual
+                this.currentStore = '';    // Tienda seleccionada para filtro
+                this.currentSort = '';     // Criterio de ordenamiento actual
+
+                // Inicialización de componentes
+                this.initializeElements();
+                this.attachEventListeners();
+                this.loadInitialGames();
+            }
+
+            // Obtiene referencias a elementos del DOM
+            initializeElements() {
+                // Elementos principales
+                this.gamesGrid = document.getElementById('grid');
+                this.loadingIndicator = document.getElementById('loading');
+                this.errorMessage = document.getElementById('error');
+                this.noResults = document.getElementById('noResults');
+                
+                // Elementos de búsqueda y filtros
+                this.searchInput = document.getElementById('search');
+                this.searchBtn = document.getElementById('btnSearch');
+                this.storeFilter = document.getElementById('storeSelect');
+                this.sortSelect = document.getElementById('sortSelect');
+                
+                // Elementos de paginación
+                this.loadMoreBtn = document.getElementById('loadMore');
+                
+                // Elementos del modal
+                this.gameModal = document.getElementById('modal');
+                this.modalContent = document.getElementById('modalContent');
+                this.closeModalBtn = document.getElementById('closeModal');
+            }
+
+            // Configura event listeners en elementos para interacciones
+            attachEventListeners() {
+                // Eventos de busqueda
+                this.searchBtn.addEventListener('click', () => this.handleSearch());
+                this.searchInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.handleSearch();
+                });
+
+                // Eventos de filtrado y ordenamiento
+                this.storeFilter.addEventListener('change', () => this.handleFilter());
+                this.sortSelect.addEventListener('change', () => this.handleSort());
+                
+                // Eventos de paginación
+                this.loadMoreBtn.addEventListener('click', () => this.loadMoreGames());
+                
+                // Eventos del modal
+                this.closeModalBtn.addEventListener('click', () => this.closeGameModal());
+                this.gameModal.addEventListener('click', (e) => {
+                    if (e.target === this.gameModal) this.closeGameModal();
+                });
+            }
+
+            // 15 juegos iniciales
+            async loadInitialGames() {
+                this.showLoading();
+                this.hideError();
+                this.hideNoResults();
+                
+                try {
+                    const response = await fetch('https://www.cheapshark.com/api/1.0/deals?storeID=1&pageSize=15');
+                    if (!response.ok) throw new Error('Error en la API');
+                    
+                    const data = await response.json();
+                    this.games = Array.isArray(data) ? data.slice(0, 15) : [];
+                    this.renderGames();
+                    this.hideLoading();
+                    
+                    if (this.games.length === 0) {
+                        this.showNoResults();
+                    }
+                } catch (error) {
+                    this.showError();
+                    this.hideLoading();
+                    console.error('Error:', error);
+                }
+            }
+
+            // Busca juegos por nombre o tienda
+            async handleSearch() {
+                const searchTerm = this.searchInput.value.trim();
+                
+                // Evitar busquedas duplicadas
+                if (searchTerm === this.currentSearch && searchTerm !== '') return;
+
+                // Reiniciar estado para nueva búsqueda
+                this.currentSearch = searchTerm;
+                this.currentPage = 0;
+                this.games = [];
+
+                this.showLoading();
+                this.hideError();
+                this.hideNoResults();
+
+                try {
+                    let url;
+                    // Determinar endpoint según si hay término de búsqueda
+                    if (searchTerm) {
+                        url = `https://www.cheapshark.com/api/1.0/games?title=${encodeURIComponent(searchTerm)}&limit=20`;
+                    } else {
+                        // Si no hay búsqueda, cargar juegos normales
+                        url = 'https://www.cheapshark.com/api/1.0/deals?storeID=1&pageSize=12';
+                    }
+
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('Error en la búsqueda');
+                    
+                    const data = await response.json();
+                    this.games = Array.isArray(data) ? data : (data || []);
+                    
+                    this.renderGames();
+                    this.hideLoading();
+                    
+                    if (this.games.length === 0) {
+                        this.showNoResults();
+                    }
+                } catch (error) {
+                    this.showError();
+                    this.hideLoading();
+                }
+            }
+
+            // Filtra por tienda seleccionada
+            handleFilter() {
+                this.currentStore = this.storeFilter.value;
+                this.applyFiltersAndSort();
+            }
+
+            // Ordena por criterio seleccionado
+            handleSort() {
+                this.currentSort = this.sortSelect.value;
+                this.applyFiltersAndSort();
+            }
+
+            // Aplica filtros y ordenamiento
+            applyFiltersAndSort() {
+                let filteredGames = [...this.games];
+
+                // Aplicar filtro por tienda si está seleccionado
+                if (this.currentStore) {
+                    filteredGames = filteredGames.filter(game => 
+                        game.storeID == this.currentStore
+                    );
+                }
+
+                // Aplicar ordenamiento según criterio seleccionado
+                if (this.currentSort) {
+                    switch (this.currentSort) {
+                        case 'salePriceAsc':
+                            filteredGames.sort((a, b) => (a.salePrice || 0) - (b.salePrice || 0));
+                            break;
+                        case 'salePriceDesc':
+                            filteredGames.sort((a, b) => (b.salePrice || 0) - (a.salePrice || 0));
+                            break;
+                        case 'normalPriceAsc':
+                            filteredGames.sort((a, b) => (a.normalPrice || 0) - (b.normalPrice || 0));
+                            break;
+                        case 'normalPriceDesc':
+                            filteredGames.sort((a, b) => (b.normalPrice || 0) - (a.normalPrice || 0));
+                            break;
+                        case 'savingsDesc':
+                            filteredGames.sort((a, b) => (b.savings || 0) - (a.savings || 0));
+                            break;
+                        case 'titleAsc':
+                            filteredGames.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+                            break;
+                    }
+                }
+
+                this.renderGames(filteredGames);
+                
+                // Mostrar mensaje si no hay resultados al filtrar
+                if (filteredGames.length === 0) {
+                    this.showNoResults();
+                } else {
+                    this.hideNoResults();
+                }
+            }
+
+            // Renderiza tarjetas de juegos dinámicamente
+            renderGames(gamesToRender = this.games) {
+                this.clearGamesGrid();
+
+                // Verificar si hay juegos para mostrar
+                if (!gamesToRender || gamesToRender.length === 0) {
+                    this.showNoResults();
+                    return;
+                }
+
+                // Crear y agregar tarjeta para cada juego
+                gamesToRender.forEach(game => {
+                    const gameCard = this.createGameCard(game);
+                    this.gamesGrid.appendChild(gameCard);
+                });
+            }
+
+            // Crea una tarjeta individual de juego
+            createGameCard(game) {
+                const card = document.createElement('div');
+                card.className = 'game-card bg-white rounded-lg overflow-hidden shadow-md border border-gray-200 fade-in';
+                
+                // Procesamiento de datos para mostrar
+                const discount = Math.round(game.savings || 0);
+                const normalPrice = parseFloat(game.normalPrice) || 0;
+                const salePrice = parseFloat(game.salePrice) || 0;
+
+                // Plantilla HTML de la tarjeta
+                card.innerHTML = `
+                    <div class="relative overflow-hidden">
+                        <img 
+                            src="${game.thumb || 'https://via.placeholder.com/300x140/2a475e/8f98a0?text=Game+Image'}" 
+                            alt="${game.title}"
+                            class="w-full h-40 object-cover"
+                            onerror="this.src='https://via.placeholder.com/300x140/2a475e/8f98a0?text=Game+Image'"
+                        >
+                        ${discount > 0 ? `
+                            <div class="absolute top-3 right-3">
+                                <span class="discount-badge px-3 py-1 rounded-lg text-white text-sm font-bold">
+                                    -${discount}%
+                                </span>
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <div class="p-4">
+                        <h3 class="font-semibold text-lg mb-2 line-clamp-2">${game.title || 'Título no disponible'}</h3>
+                        
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-2">
+                                    ${discount > 0 ? `
+                                        <span class="text-gray-500 line-through text-sm">$${normalPrice.toFixed(2)}</span>
+                                    ` : ''}
+                                    <span class="text-green-600 font-bold">$${salePrice.toFixed(2)}</span>
+                                </div>
+                                <span class="text-yellow-500 text-sm">★ ${game.steamRatingPercent ? game.steamRatingPercent + '%' : 'N/A'}</span>
+                            </div>
+
+                            <button 
+                                onclick="gameStore.showGameDetails('${game.gameID || game.cheapestDealID}')"
+                                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded font-bold transition-all text-sm shadow-md hover:shadow-lg"
+                            >
+                                Ver detalle
+                            </button>
+                        </div>
+                    </div>
+                `;
+                return card;
+            }
+
+            // Obtiene detalles del juego desde API
+            async showGameDetails(gameId) {
+                if (!gameId) return;
+
+                this.showLoading();
+                try {
+                    // Realizar la solicitud para obtener los detalles del juego
+                    const response = await fetch(`https://www.cheapshark.com/api/1.0/games?id=${gameId}`);
+                    if (!response.ok) throw new Error('Error al cargar detalles');
+                    
+                    const gameDetails = await response.json();
+                    this.openGameModal(gameDetails);
+                    this.hideLoading();
+                } catch (error) {
+                    this.hideLoading();
+                    alert('Error al cargar los detalles del juego');
+                }
+            }
+
+            // Abre modal con detalles del juego
+            openGameModal(gameDetails) {
+                if (!gameDetails) return;
+
+                const info = gameDetails.info || {};
+                const deals = gameDetails.deals || [];
+                const cheapestDeal = deals[0] || {};
+
+                // Construir contenido del modal
+                this.modalContent.innerHTML = `
+                    <h2 class="text-2xl font-bold mb-4">${info.title || 'Detalles del Juego'}</h2>
+                    <div class="space-y-6">
+                        <img 
+                            src="${info.thumb || 'https://via.placeholder.com/600x300/2a475e/8f98a0?text=Game+Image'}" 
+                            alt="${info.title}"
+                            class="w-full h-64 object-cover rounded-lg shadow-lg"
+                        >
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="bg-gray-100 p-4 rounded-lg border border-gray-200">
+                                <h4 class="text-gray-600 text-sm font-semibold mb-2">Precio Original</h4>
+                                <p class="text-gray-800 text-xl font-bold line-through">$${(cheapestDeal.retailPrice || 0).toFixed(2)}</p>
+                            </div>
+                            <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                                <h4 class="text-green-700 text-sm font-semibold mb-2">Precio Oferta</h4>
+                                <p class="text-green-800 text-xl font-bold">$${(cheapestDeal.price || 0).toFixed(2)}</p>
+                                ${cheapestDeal.retailPrice ? `<p class="text-green-600 text-sm mt-2">Ahorras: $${(cheapestDeal.retailPrice - cheapestDeal.price).toFixed(2)}</p>` : ''}
+                            </div>
+                        </div>
+                        
+                        ${info.steamAppID ? `
+                            <div class="text-center">
+                                <a 
+                                    href="https://store.steampowered.com/app/${info.steamAppID}" 
+                                    target="_blank"
+                                    class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-lg font-bold transition-all shadow-lg hover:shadow-xl"
+                                >
+                                    Ver en Steam
+                                </a>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="bg-gray-100 p-4 rounded-lg border border-gray-200">
+                            <h4 class="text-gray-800 font-semibold mb-2">Información del juego</h4>
+                            <p class="text-gray-600 text-sm">${info.review_release_date ? 'Lanzamiento: ' + info.review_release_date : 'Información disponible en la tienda'}</p>
+                        </div>
+                    </div>
+                `;
+                
+                // Mostrar modal
+                this.gameModal.classList.remove('hidden');
+            }
+
+            // Cierra el modal
+            closeGameModal() {
+                this.gameModal.classList.add('hidden');
+            }
+
+            // Carga más juegos hasta máximo de 15 total
+            async loadMoreGames() {
+                if (this.isLoading || this.games.length >= 15) return;
+                
+                this.isLoading = true;
+                this.showLoading();
+                
+                try {
+                    this.currentPage++;
+                    const response = await fetch(
+                        `https://www.cheapshark.com/api/1.0/deals?storeID=1&pageSize=15&pageNumber=${this.currentPage}`
+                    );
+                    
+                    if (!response.ok) throw new Error('Error al cargar más juegos');
+                    
+                    const newGames = await response.json();
+                    
+                    if (!newGames || newGames.length === 0) {
+                        this.hasMore = false;
+                        this.loadMoreBtn.disabled = true;
+                        this.loadMoreBtn.textContent = 'LÍMITE: 15 JUEGOS';
+                    } else {
+                        const totalGames = this.games.length + newGames.length;
+                        if (totalGames >= 15) {
+                            this.games = [...this.games, ...newGames].slice(0, 15);
+                            this.hasMore = false;
+                            this.loadMoreBtn.disabled = true;
+                            this.loadMoreBtn.textContent = 'LÍMITE: 15 JUEGOS';
+                        } else {
+                            this.games = [...this.games, ...newGames];
+                        }
+                        this.renderGames();
+                    }
+                    
+                    this.hideLoading();
+                    this.isLoading = false;
+                } catch (error) {
+                    this.showError();
+                    this.isLoading = false;
+                }
+            }
+
+            // Limpia el grid de juegos
+            clearGamesGrid() {
+                this.gamesGrid.innerHTML = '';
+            }
+
+            // Muestra indicador de carga
+            showLoading() {
+                this.loadingIndicator.classList.remove('hidden');
+                this.errorMessage.classList.add('hidden');
+                this.noResults.classList.add('hidden');
+            }
+
+            // Oculta indicador de carga
+            hideLoading() {
+                this.loadingIndicator.classList.add('hidden');
+            }
+
+            // Muestra error
+            showError() {
+                this.errorMessage.classList.remove('hidden');
+                this.loadingIndicator.classList.add('hidden');
+                this.noResults.classList.add('hidden');
+            }
+
+            // Oculta error
+            hideError() {
+                this.errorMessage.classList.add('hidden');
+            }
+
+            // Muestra sin resultados
+            showNoResults() {
+                this.noResults.classList.remove('hidden');
+                this.loadingIndicator.classList.add('hidden');
+                this.errorMessage.classList.add('hidden');
+            }
+
+            // Oculta sin resultados
+            hideNoResults() {
+                this.noResults.classList.add('hidden');
+            }
+        }
+
+        // Inicia la aplicación cuando el DOM carga
+        document.addEventListener('DOMContentLoaded', () => {
+            window.gameStore = new GameStore();
+        });
+    </script>
+</body>
