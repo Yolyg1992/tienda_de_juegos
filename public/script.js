@@ -226,7 +226,7 @@ class GameStore {
             </div>
 
             <div class="p-4">
-                <h3 class="font-semibold text-lg mb-2 line-clamp-2">${game.title}</h3>
+                <h3 class="font-semibold text-lg mb-2 line-clamp-2 text-indigo-600">${game.title}</h3>
 
                 <p class="text-gray-600 text-sm line-clamp-2 mb-3">
                     ${
